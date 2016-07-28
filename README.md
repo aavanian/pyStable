@@ -2,7 +2,7 @@
 Library based on pyLevy for working with Alpha-Stable distributions. Based on the library implemented by Paul Harrison, it features python 3.5 support, and a class interface similar to the one used in sklearn for estimating KDE. 
 
 ## Example of use:
-Create a StableDist object: 
+Create a *StableDist* object: 
 ```python
 import stable as stb
 est = stb.StableDist(alpha=0.5, beta=-0.5, mu=1, sigma=0.1)
