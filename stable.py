@@ -8,6 +8,7 @@ import numpy as np
 import scipy.special as sp
 from sklearn.base import BaseEstimator
 
+__version__ = '0.5'
 
 _lower = np.array([-np.pi / 2 * 0.999, 0.5, -1.0])
 _upper = np.array([np.pi / 2 * 0.999, 2.0, 1.0])
@@ -356,18 +357,6 @@ class StableDist(BaseEstimator):
     
         from scipy import optimize
         
-#        # Use ordering to set the initial mu and sigma parameters. 
-#        x = np.sort(x)
-#        
-#        last = len(x)-1
-#        mu = x[last/2]
-#        sigma = (x[last-last/4] - x[last/4])/2.0
-#        
-#        # Maybe there are lots of zeros or something...
-#        if sigma == 0:
-#            sigma = (x[last] - x[0]) / 2.0
-#            
-#        parameters = [self.alpha, self.beta, mu, sigma]
         parameters = [self.alpha, self.beta, self.mu, self.sigma]
         
         def neglog_density(param):
@@ -375,7 +364,6 @@ class StableDist(BaseEstimator):
         
         #Initial guess
         jarl = optimize.minimize(neglog_density, parameters, method='L-BFGS-B', bounds=((0.5, 2),(-1,1), (None,None),(1e-5,None)) ,options={'maxiter': maxiter, 'disp':disp})
-        print(jarl.x)
         #Finetuning
         parameters = optimize.minimize(neglog_density, jarl.x, method='TNC', bounds=((0.5, 2),(-1,1), (None,None),(1e-5,None)) ,options={'maxiter': 100, 'disp':disp})
 
