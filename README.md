@@ -7,7 +7,7 @@ Library based on pyLevy for working with Alpha-Stable distributions. Based on th
 import stable as stb
 est = stb.StableDist(alpha=0.5, beta=-0.5, mu=1, sigma=0.1)
 ```
-Default parameters are `alpha=2.0`, `beta=0`, `mu=0`, `sigma=1`. 
+
 2. Use the object to estimate the distribution of a dataset: 
 ```python
 from scipy.stats import norm
