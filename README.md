@@ -1,5 +1,10 @@
 # pyStable
-Library based on pyLevy for working with Alpha-Stable distributions. Based on the library implemented by Paul Harrison, it features python 3.5 support, and a class interface similar to the one used in sklearn for estimating KDE. 
+Library based on pyLevy for working with Alpha-Stable distributions. 
+
+## Description
+Based on the library implemented by Paul Harrison, we have implemented a class interface similar to the one used in sklearn for estimating KDE. It features full **python 3.5** support. 
+
+The fitting algorithm is based on a minimization of the negative log-likelihood over a table that was previously generated, and can be found in the numpy files `levy_data.npz` and `levy_approx_data.npz`. Currently, these files must be located in the current working directory, otherwise, the program will fail. There is a computationally intensive way to generate these files by executing `StableDist._make_data_file()` and `StableDist.__make_approx_data_file()` in that order. In further versions, we expect to solve this inconvenience. 
 
 ## Example of use:
 Create a *StableDist* object: 
