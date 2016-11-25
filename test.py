@@ -7,7 +7,7 @@ Created on Tue Jul 26 09:57:22 2016
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-os.chdir('/home/pakitochus/Dropbox/Investigacion/Experimentos/201604-Brain_Simulator/pylevy')
+os.chdir('/home/pakitochus/Investigacion/Experimentos/201604-Brain_Simulator/pyStable')
 import stable as stb
 os.chdir('..')
 
@@ -36,6 +36,7 @@ plt.plot(ejex,est.levy(ejex), label='Initial')
 x = est.sample(50000)
 est = stb.StableDist(alpha=1,beta=0)
 est.fit(x,maxiter=1e9)
+print('Estimated: alpha %.3f, beta %.3f, mu %.3f sigma %.3f'%(est.alpha, est.beta,est.mu, est.sigma))
 plt.plot(ejex,est.levy(ejex), label='Estimated')
 plt.legend()
 
