@@ -4,11 +4,13 @@ Stable Distributions
 """
 # Author: F.J. Martinez-Murcia <fjesusmartinez@ugr.es>. Based on Levy Stable code by Paul F. Harrison
 
+import pkg_resources
+
 import numpy as np
+from scipy import optimize
 import scipy.special as sp
 from sklearn.base import BaseEstimator
 
-__version__ = '0.5'
 
 _lower = np.array([-np.pi / 2 * 0.999, 0.5, -1.0])
 _upper = np.array([np.pi / 2 * 0.999, 2.0, 1.0])
@@ -32,6 +34,40 @@ f_bounds = {
     'sigma': lambda x: x
 }
 
+
+levy_data_file = pkg_resources.resource_filename('stable', 'data/levy_data.npz')
+levy_approx_data_file = pkg_resources.resource_filename('stable', 'data/levy_approx_data.npz')
+
+
+class Parameters(object):
+    def __init__(self, **kwargs):
+        # self._f = [f_bounds[k] for k in par_names]
+        self._x = np.array([default[k] if kwargs[k] is None else kwargs[k] for k in par_names])
+        self.variables = [i for i, k in enumerate(par_names) if kwargs[k] is None]
+        self.fixed = [i for i, k in enumerate(par_names) if kwargs[k] is not None]
+        self.fixed_values = [kwargs[k] for i, k in enumerate(par_names) if kwargs[k] is not None]
+        self._bounds = np.array([(0.5, 2),(-1,1), (None,None),(1e-5,None)])
+        self.bounds = self._bounds[self.variables]
+
+    def get_all(self):
+        return self._x
+
+    def __str__(self):
+        return self.x.__str__()
+
+    @property
+    def x(self):
+        return self._x[self.variables]
+
+    @x.setter
+    def x(self, value):
+        for j, i in enumerate(self.variables):
+            f = f_bounds[par_names[i]]
+            val = value[j]
+            h = self._x[i]
+            self._x[i] = f(val)
+            
+            
 class StableDist(BaseEstimator):
     
     """Stable Distribution fitting. Currently it works only for 
@@ -202,7 +238,7 @@ class StableDist(BaseEstimator):
                     pdf[k, i, j] = self._levy_tan(x, alpha, beta)
                     cdf[k, i, j] = self._levy_tan(x, alpha, beta, True)
     
-        np.savez('levy_data.npz', pdf=pdf, cdf=cdf)
+        np.savez(levy_data_file, pdf=pdf, cdf=cdf)
     
     
     def _int_levy(self, x, alpha, beta, cdf=False):
@@ -212,7 +248,7 @@ class StableDist(BaseEstimator):
     
             Note: may sometimes return slightly negative values, due to numerical inaccuracies.
         """
-        levy_data = np.load('levy_data.npz')
+        levy_data = np.load(levy_data_file)
     
         points = np.empty(np.shape(x) + (3,), 'float64')
         points[..., 0] = np.arctan(x)
@@ -251,7 +287,7 @@ class StableDist(BaseEstimator):
                 print("Calculating alpha={}, beta={}, limit={}".format(alpha, beta, limits[i, j]))
     
     
-        np.savez('levy_approx_data.npz', limits=limits)
+        np.savez(levy_approx_data_file, limits=limits)
 
     
     def levy(self, x, alpha=None, beta=None, mu=None, sigma=None, cdf=False, par=0):
@@ -289,11 +325,9 @@ class StableDist(BaseEstimator):
             loc = mu
         elif par == 1:
             loc = mu+ beta * sigma* np.tan(np.pi * alpha / 2.0)  # Par 1 is changed
-        
-#        import os
-#        os.chdir('pylevy')
-        levy_data = np.load('levy_data.npz') #Loads datafiles. 
-        levy_approx_data = np.load('levy_approx_data.npz')
+
+        levy_data = np.load(levy_data_file) #Loads datafiles.
+        levy_approx_data = np.load(levy_approx_data_file)
     
         if cdf:
             what = levy_data['cdf']
@@ -339,7 +373,7 @@ class StableDist(BaseEstimator):
         return -np.log(np.maximum(1e-100, self.levy(x, alpha, beta, mu, sigma, par=par)))
     
     
-    def fit(self, x, par=0, disp=False, maxiter=1e6):
+    def fit(self, x, alpha=None, beta=None, mu=None, sigma=None, par=0, disp=False, maxiter=int(1e6)):
         """
         Fit parameters of Levy stable distribution given data x, using an 
         initial guess based on SLSQP and finetuning by Truncated Newton 
@@ -354,25 +388,40 @@ class StableDist(BaseEstimator):
     
         Returns a tuple of ([alpha, beta, mu, sigma], negative log density)
         """
-    
-        from scipy import optimize
-        
-        parameters = [self.alpha, self.beta, self.mu, self.sigma]
+
+        # The parametrization is changed to par=0, if is par=1. At the end, the parametrization is reverted.
+        mu0 = mu
+        if mu is not None and par == 1:
+            mu0 = mu + beta * sigma * np.tan(np.pi * alpha / 2.0)  # Par 1 is changed
+
+        # parameters = np.array([self.alpha, self.beta, self.mu, self.sigma])
+        kwargs = {'alpha': alpha, 'beta': beta, 'mu': mu0, 'sigma': sigma}
+        parameters = Parameters(**kwargs)
         
         def neglog_density(param):
-            return np.sum(self.neglog_levy(x, param[0], param[1], param[2], param[3]))
+            p = np.zeros(4)
+            p[parameters.variables] = param
+            p[parameters.fixed] = parameters.fixed_values
+            alpha, beta, mu, sigma = p
+            return np.sum(self.neglog_levy(x, alpha, beta, mu, sigma))
         
         #Initial guess
-        jarl = optimize.minimize(neglog_density, parameters, method='L-BFGS-B', bounds=((0.5, 2),(-1,1), (None,None),(1e-5,None)) ,options={'maxiter': maxiter, 'disp':disp})
+        method = 'L-BFGS-B'
+        parameters.x = optimize.minimize(neglog_density, parameters.x, method=method, bounds=parameters.bounds, options={'maxiter': maxiter, 'disp':disp}).x
+        
         #Finetuning
-        parameters = optimize.minimize(neglog_density, jarl.x, method='TNC', bounds=((0.5, 2),(-1,1), (None,None),(1e-5,None)) ,options={'maxiter': 100, 'disp':disp})
+        # parameters.x = optimize.minimize(neglog_density, parameters.x, method='TNC', bounds=parameters.bounds, options={'maxiter': 100, 'disp':disp}).x
 
-        
-        self._update_params(parameters.x[0], parameters.x[1], parameters.x[2], parameters.x[3])
-        
-        return (parameters.x, parameters.fun)
+        alpha, beta, mu, sigma = parameters.get_all()
+        self._update_params(alpha, beta, mu, sigma)
+        return alpha, beta, mu, sigma, neglog_density(parameters.x)
     
-    
+    def ppf(self, q, par=0):
+        parameters = [self.alpha, self.beta, self.mu, self.sigma]
+        
+        tgt = lambda x: (self.levy(np.array(x), parameters[0], parameters[1], parameters[2], parameters[3], cdf=True, par=par) - q) ** 2
+        return optimize.minimize_scalar(tgt).x
+
     def sample(self, n_samples=1, random_state=None, par=0):
         """
         Generate random values sampled from an alpha-stable distribution.
@@ -429,3 +478,9 @@ class StableDist(BaseEstimator):
         return mu0 + self.sigma* k
     
     
+if __name__ == '__main__':
+    x = np.random.randn(3000)
+    a = StableDist()
+    b = StableDist()
+    print(a.fit(x))
+    print(b.fit(x, alpha=1.5))
