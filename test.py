@@ -7,9 +7,9 @@ Created on Tue Jul 26 09:57:22 2016
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-os.chdir('/home/pakitochus/Investigacion/Experimentos/201604-Brain_Simulator/pyStable')
+# os.chdir('/home/pakitochus/Investigacion/Experimentos/201604-Brain_Simulator/pyStable')
 import stable as stb
-os.chdir('..')
+# os.chdir('..')
 
 est = stb.StableDist(alpha=0.5, beta=-0.5, mu=1, sigma=0.1)
 #est._make_data_file()
