@@ -1,3 +1,7 @@
+## ⚠️ Archived
+
+This project is no longer maintained. Alpha-stable distributions are now supported natively in [`scipy.stats.levy_stable`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.levy_stable.html), which should be used instead. It covers PDF, CDF, sampling, and MLE fitting with multiple parameterizations (S0/S1) and computation methods, and is actively maintained as part of SciPy.
+
 # pyStable
 Library based on pyLevy for working with Alpha-Stable distributions. 
 
